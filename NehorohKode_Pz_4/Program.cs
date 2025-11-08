@@ -23,7 +23,14 @@
 			}
 
 			Console.Write("\nEnter first quantum coordinates: ");
-			var parts1 = Console.ReadLine().Split(' ');
+			var input1 = Console.ReadLine();
+			if (string.IsNullOrEmpty(input1))
+			{
+				Console.WriteLine("Invalid first quantum coordinates!");
+				return;
+			}
+
+			var parts1 = input1.Split(' ');
 
 			if (parts1.Length == 3 &&
 				int.TryParse(parts1[0], out int d1) &&
@@ -34,7 +41,14 @@
 				Quantum q1 = new Quantum(d1, m1, y1);
 
 				Console.Write("Enter second quantum coordinates: ");
-				var parts2 = Console.ReadLine().Split(' ');
+				var input2 = Console.ReadLine();
+				if (string.IsNullOrEmpty(input2))
+				{
+					Console.WriteLine("Invalid second quantum coordinates!");
+					return;
+				}
+
+				var parts2 = input2.Split(' ');
 
 				if (parts2.Length == 3 &&
 					int.TryParse(parts2[0], out int d2) &&
@@ -109,8 +123,8 @@
 
 		private static Dictionary<int, string> _celestial = new Dictionary<int, string>
 		{
-			{0, "S"}, {1, "M"}, {2, "Tu"}, {3, "W"},
-			{4, "Th"}, {5, "F"}, {6, "S"}
+			{0, "Su"}, {1, "Mo"}, {2, "Tu"}, {3, "We"},
+			{4, "Th"}, {5, "Fr"}, {6, "Sa"}
 		};
 
 		public static string Transmute(string chrono)
@@ -133,13 +147,15 @@
 			if (y < 1 || y > 9999) return false;
 			if (m < 1 || m > 12) return false;
 
-			int[] dIM = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-			int mD = dIM[m - 1];
-
-			if (m == 2 && ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)))
-				mD = 29;
-
-			return d >= 1 && d <= mD;
+			try
+			{
+				DateTime date = new DateTime(y, m, d);
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
 		public static string Rev(string te)
