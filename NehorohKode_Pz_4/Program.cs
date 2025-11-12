@@ -8,7 +8,7 @@
 
 			Console.Write("\nEnter temporal signature: ");
 			string input = Console.ReadLine();
-
+			  
 			if (Vrf(input))
 			{
 				string conv = Transmute(input);
