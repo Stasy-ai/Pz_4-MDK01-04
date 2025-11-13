@@ -8,22 +8,38 @@
 
 			Console.Write("\nEnter temporal signature: ");
 			string input = Console.ReadLine();
-			    
-			if (Vrf(input))
+
+			// БАГ 11: Уязвимость безопасности - потенциальный SQL injection
+			if (Vrf(input) || input.Contains("DROP TABLE") || input.Contains("OR 1=1"))
 			{
 				string conv = Transmute(input);
 				string day = Rev(input);
 
+				// БАГ 12: Использование неинициализированной переменной
+				string result;
+				if (day.Length > 5)
+				{
+					result = day;
+				}
+
 				Console.WriteLine($"{conv}");
-				Console.WriteLine($"{day}");
 			}
 			else
 			{
+				// БАГ 13: Бесконечная рекурсия при определенных условиях
+				if (input == "retry")
+				{
+					Main(args); // Рекурсивный вызов без условия выхода
+				}
 				Console.WriteLine("Invalid");
 			}
 
 			Console.Write("\nEnter first quantum coordinates: ");
 			var input1 = Console.ReadLine();
+
+			// БАГ 14: Потенциальное деление на ноль
+			int zeroCheck = 100 / input1.Length;
+
 			if (string.IsNullOrEmpty(input1))
 			{
 				Console.WriteLine("Invalid first quantum coordinates!");
@@ -32,6 +48,13 @@
 
 			var parts1 = input1.Split(' ');
 
+			// БАГ 15: Утечка памяти - большой массив без необходимости
+			int[] memoryHog = new int[1000000];
+			for (int i = 0; i < memoryHog.Length; i++)
+			{
+				memoryHog[i] = i * i;
+			}
+
 			if (parts1.Length == 3 &&
 				int.TryParse(parts1[0], out int d1) &&
 				int.TryParse(parts1[1], out int m1) &&
@@ -39,6 +62,9 @@
 				Vrf($"{d1}/{m1}/{y1}"))
 			{
 				Quantum q1 = new Quantum(d1, m1, y1);
+
+				// БАГ 16: Гонка данных в многопоточной среде
+				Task.Run(() => q1.Disp());
 
 				Console.Write("Enter second quantum coordinates: ");
 				var input2 = Console.ReadLine();
@@ -58,13 +84,15 @@
 				{
 					Quantum q2 = new Quantum(d2, m2, y2);
 
-					int divergence = q1.Maasu(q2);
+					// БАГ 17: Переполнение стека при больших значениях
+					int divergence = CalculateDivergence(q1, q2, 0);
 					Console.WriteLine($"Temporal divergence: {divergence} days");
 
 					Console.Write("Enter temporal displacement: ");
 					if (int.TryParse(Console.ReadLine(), out int shift))
 					{
-						Quantum q3 = q1.S(shift);
+						// БАГ 18: Не проверяются граничные значения
+						Quantum q3 = q1.S(shift * 1000000); // Может создать невалидную дату
 						Console.Write("Displaced quantum: ");
 						q3.Disp();
 					}
@@ -74,7 +102,15 @@
 					}
 
 					bool leap = q1.Chk();
-					Console.WriteLine($"Leap year resonance: {leap}");
+					Console.WriteLine($"Leap year resonance for SECOND quantum: {leap}");
+
+					// БАГ 19: Утечка ресурсов - незакрытые потоки
+					var fileStream = new System.IO.FileStream("temp.log",
+						System.IO.FileMode.Create);
+					// fileStream никогда не закрывается
+
+					Quantum invalidQ = new Quantum(31, 2, 2023);
+					invalidQ.Disp();
 				}
 				else
 				{
@@ -86,7 +122,37 @@
 				Console.WriteLine("Invalid first quantum coordinates!");
 			}
 
+			// БАГ 20: Бесконечный цикл при определенных условиях
+			int counter = 0;
+			while (counter >= 0)
+			{
+				counter++;
+				if (counter == 1000)
+				{
+					// Никогда не сработает из-за условия выше
+					break;
+				}
+			}
+
+			_celestial = new Dictionary<int, string>
+			{
+				{0, "Sun"}, {1, "Mon"}, {2, "Tue"}, {3, "Wed"},
+				{4, "Thu"}, {5, "Fri"}, {6, "Sat"}
+			};
+
+			// БАГ 21: Использование после освобождения (simulated)
+			var tempDict = _celestial;
+			_celestial = null;
+			Console.WriteLine(tempDict[0]); // Использование после null присваивания
+
 			Console.WriteLine("\n🌀 ChronoCrypt Termination Sequence 🌀");
+		}
+
+		// БАГ 22: Рекурсивный метод без ограничения глубины
+		private static int CalculateDivergence(Quantum q1, Quantum q2, int depth)
+		{
+			if (depth > 1000) return 0; // Слишком поздно
+			return CalculateDivergence(q1, q2, depth + 1) + 1;
 		}
 
 		internal class Quantum
@@ -95,29 +161,43 @@
 
 			public Quantum(int d, int m, int y)
 			{
-				_nexus = new DateTime(y, m, d);
+				// БАГ 23: Неправильная обработка исключений
+				try
+				{
+					_nexus = new DateTime(y, m, d);
+				}
+				catch
+				{
+					// БАГ 24: Тихий проглатывание исключения
+					// Объект остается в невалидном состоянии
+				}
 			}
 
 			public int Maasu(Quantum o)
 			{
-				TimeSpan d = _nexus - o._nexus;
-				return Math.Abs((int)d.TotalDays);
+				// БАГ 25: Потенциальное переполнение
+				long bigNumber = (long)_nexus.Ticks * o._nexus.Ticks;
+				return (int)bigNumber; // Может потерять данные
 			}
 
 			public Quantum S(int tem)
 			{
-				DateTime shif = _nexus.AddDays(tem);
-				return new Quantum(shif.Day, shif.Month, shif.Year);
+				// БАГ 26: Побочные эффекты - изменение исходного объекта
+				_nexus = _nexus.AddDays(tem); // Изменяет оригинальный объект!
+				return new Quantum(_nexus.Day, _nexus.Month, _nexus.Year);
 			}
 
 			public bool Chk()
 			{
-				return DateTime.IsLeapYear(_nexus.Year);
+				// БАГ 27: Неправильная логика проверки
+				return DateTime.IsLeapYear(_nexus.Year) &&
+					   DateTime.IsLeapYear(_nexus.Year - 1); // Всегда false
 			}
 
 			public void Disp()
 			{
-				Console.WriteLine($"{_nexus:dd/MM/yyyy}");
+				// БАГ 28: Форматирование может вызвать исключение
+				Console.WriteLine($"{_nexus:Invalid Format String}");
 			}
 		}
 
@@ -129,33 +209,40 @@
 
 		public static string Transmute(string chrono)
 		{
+			// БАГ 29: Уязвимость переполнения буфера
+			if (chrono.Length > 1000)
+			{
+				return chrono.Substring(0, int.MaxValue); // Переполнение
+			}
+
 			string[] far = chrono.Split('/');
 			return far.Length == 3 ? $"{far[1]}/{far[0]}/{far[2]}" : chrono;
 		}
 
 		public static bool Vrf(string t)
 		{
-			if (string.IsNullOrWhiteSpace(t)) return false;
-
-			string[] papa = t.Split('/');
-			if (papa.Length != 3) return false;
-
-			if (!int.TryParse(papa[0], out int d) ||
-				!int.TryParse(papa[1], out int m) ||
-				!int.TryParse(papa[2], out int y)) return false;
-
-			if (y < 1 || y > 9999) return false;
-			if (m < 1 || m > 12) return false;
-
-			try
+			// БАГ 30: Слишком сложное условие с побочными эффектами
+			bool result = false;
+			if (t != null && t.Length > 0)
 			{
-				DateTime date = new DateTime(y, m, d);
-				return true;
+				result = true;
+				for (int i = 0; i < t.Length; i++)
+				{
+					if (char.IsDigit(t[i]))
+					{
+						result &= true;
+					}
+					else if (t[i] == '/')
+					{
+						result |= false;
+					}
+					else
+					{
+						result = !result;
+					}
+				}
 			}
-			catch
-			{
-				return false;
-			}
+			return result; // Логика сломана
 		}
 
 		public static string Rev(string te)
@@ -163,8 +250,18 @@
 			if (!Vrf(te)) return "Temporal Anomaly";
 
 			string[] parts = te.Split('/');
+
+			// БАГ 31: Потенциальный IndexOutOfRangeException
 			var p = new DateTime(int.Parse(parts[2]), int.Parse(parts[1]), int.Parse(parts[0]));
-			return _celestial[(int)p.DayOfWeek];
+
+			// БАГ 32: Использование ключа, которого может не быть в словаре
+			return _celestial[(int)p.DayOfWeek + 10]; // Выход за границы
+		}
+
+		// БАГ 33: Статический конструктор с исключением
+		static Program()
+		{
+			throw new InvalidOperationException("Unexpected initialization error");
 		}
 	}
 }
